@@ -1,0 +1,19 @@
+{
+  "name": "SplitMate — Shared Expense Management",
+  "short_name": "SplitMate",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "description": "Deterministic, 100% free shared expense management platform with AI and UPI settlement.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
