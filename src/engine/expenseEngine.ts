@@ -195,19 +195,20 @@ export function validateSplits(
   return { valid: true };
 }
 
-/** Calculate net balances for each user in a group or system */
+/** Calculate net balances for each user in a group or system, optionally isolated by currency */
 export function calculateNetBalances(
   expenses: Expense[],
   settlements: Settlement[],
   groupId?: string,
+  currency?: Currency,
 ): Record<string, number> {
   const balances: Record<string, number> = {};
 
   const filteredExpenses = expenses.filter(
-    (e) => !e.isReversed && (!groupId || e.groupId === groupId),
+    (e) => !e.isReversed && (!groupId || e.groupId === groupId) && (!currency || e.currency === currency),
   );
   const filteredSettlements = settlements.filter(
-    (s) => s.confirmed && (!groupId || s.groupId === groupId),
+    (s) => s.confirmed && (!groupId || s.groupId === groupId) && (!currency || s.currency === currency),
   );
 
   // 1. Process Expenses
@@ -232,6 +233,32 @@ export function calculateNetBalances(
   });
 
   return balances;
+}
+
+/** Calculate balances grouped strictly by currency to prevent mixing different monetary units */
+export function calculateBalancesByCurrency(
+  expenses: Expense[],
+  settlements: Settlement[],
+  groupId?: string,
+): Partial<Record<Currency, Record<string, number>>> {
+  const currencies = new Set<Currency>();
+  expenses.forEach((e) => {
+    if (!e.isReversed && (!groupId || e.groupId === groupId)) {
+      currencies.add(e.currency);
+    }
+  });
+  settlements.forEach((s) => {
+    if (s.confirmed && (!groupId || s.groupId === groupId)) {
+      currencies.add(s.currency);
+    }
+  });
+
+  const result: Partial<Record<Currency, Record<string, number>>> = {};
+  currencies.forEach((curr) => {
+    result[curr] = calculateNetBalances(expenses, settlements, groupId, curr);
+  });
+
+  return result;
 }
 
 /**

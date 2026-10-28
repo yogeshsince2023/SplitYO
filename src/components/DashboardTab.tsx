@@ -8,6 +8,7 @@ import {
 } from '../types';
 import { 
   calculateNetBalances, 
+  calculateBalancesByCurrency,
   simplifyDebts, 
   formatMoney 
 } from '../engine/expenseEngine';
@@ -18,10 +19,8 @@ import {
   Users, 
   ChevronRight, 
   CheckCircle2, 
-  TrendingUp, 
   Receipt, 
   Plus,
-  Zap,
   CreditCard
 } from 'lucide-react';
 
@@ -50,12 +49,19 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 }) => {
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
 
-  // Calculate overall global balances for current user
-  const globalBalances = calculateNetBalances(expenses, settlements);
-  const myNet = globalBalances[currentUser.id] || 0;
+  // Calculate isolated per-currency balances for current user
+  const balancesByCurrency = calculateBalancesByCurrency(expenses, settlements);
+  const activeCurrencies = (Object.keys(balancesByCurrency) as Currency[]).filter(
+    (c) => (balancesByCurrency[c]?.[currentUser.id] || 0) !== 0,
+  );
 
-  let totalOwedToMe = 0;
-  let totalIOwe = 0;
+  // Fallback to INR or first group currency if no active debts
+  const primaryCurrency: Currency = activeCurrencies[0] || groups[0]?.currency || 'INR';
+  const myPrimaryNet = balancesByCurrency[primaryCurrency]?.[currentUser.id] || 0;
+
+  // Track owed and owe per currency
+  const owedToMeByCurr: Partial<Record<Currency, number>> = {};
+  const iOweByCurr: Partial<Record<Currency, number>> = {};
 
   const allSuggestedSettlements: {
     groupId: string;
@@ -67,16 +73,16 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   }[] = [];
 
   groups.forEach((grp) => {
-    const grpBalances = calculateNetBalances(expenses, settlements, grp.id);
+    const grpBalances = calculateNetBalances(expenses, settlements, grp.id, grp.currency);
     const simplified = simplifyDebts(grpBalances, grp.currency);
     simplified.forEach((s) => {
       const fromUser = userMap.get(s.fromUserId);
       const toUser = userMap.get(s.toUserId);
       if (fromUser && toUser) {
         if (s.toUserId === currentUser.id) {
-          totalOwedToMe += s.amountMinor;
+          owedToMeByCurr[grp.currency] = (owedToMeByCurr[grp.currency] || 0) + s.amountMinor;
         } else if (s.fromUserId === currentUser.id) {
-          totalIOwe += s.amountMinor;
+          iOweByCurr[grp.currency] = (iOweByCurr[grp.currency] || 0) + s.amountMinor;
         }
         allSuggestedSettlements.push({
           groupId: grp.id,
@@ -89,6 +95,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       }
     });
   });
+
+  const primaryOwedToMe = owedToMeByCurr[primaryCurrency] || 0;
+  const primaryIOwe = iOweByCurr[primaryCurrency] || 0;
 
   const recentExpenses = [...expenses]
     .filter((e) => !e.isReversed)
@@ -110,29 +119,46 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
               Total Net Balance
             </span>
-            <span className={`badge text-[9px] px-2 py-0.5 ${myNet >= 0 ? 'badge-success' : 'badge-danger'}`}>
-              {myNet > 0 ? 'In Credit' : myNet < 0 ? 'In Debt' : 'Settled'}
+            <span className={`badge text-[9px] px-2 py-0.5 ${myPrimaryNet >= 0 ? 'badge-success' : 'badge-danger'}`}>
+              {myPrimaryNet > 0 ? 'In Credit' : myPrimaryNet < 0 ? 'In Debt' : 'Settled'}
             </span>
           </div>
 
           <div 
             className="w-7 h-7 rounded-lg flex items-center justify-center"
             style={{ 
-              background: myNet >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-              color: myNet >= 0 ? '#10b981' : '#f43f5e'
+              background: myPrimaryNet >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+              color: myPrimaryNet >= 0 ? '#10b981' : '#f43f5e'
             }}
           >
-            {myNet >= 0 ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+            {myPrimaryNet >= 0 ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
           </div>
         </div>
 
         <div className="mt-2 mb-4">
-          <h2 className={`text-3xl font-display font-extrabold tracking-tight ${myNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {myNet >= 0 ? '+' : ''}{formatMoney(myNet, 'INR')}
+          <h2 className={`text-3xl font-display font-extrabold tracking-tight ${myPrimaryNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {myPrimaryNet >= 0 ? '+' : ''}{formatMoney(myPrimaryNet, primaryCurrency)}
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Across {groups.length} active groups & shared pools
+            Primary balance ({primaryCurrency}) across {groups.length} active groups
           </p>
+          {activeCurrencies.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {activeCurrencies.slice(1).map((curr) => {
+                const net = balancesByCurrency[curr]?.[currentUser.id] || 0;
+                return (
+                  <span
+                    key={curr}
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                      net >= 0 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 'text-rose-400 border-rose-500/30 bg-rose-500/10'
+                    }`}
+                  >
+                    {curr}: {net >= 0 ? '+' : ''}{formatMoney(net, curr)}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Quick Action Button on Hero */}
@@ -176,10 +202,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </div>
           </div>
           <h3 className="text-xl font-display font-extrabold text-emerald-500">
-            {formatMoney(totalOwedToMe, 'INR')}
+            {formatMoney(primaryOwedToMe, primaryCurrency)}
           </h3>
           <p className="text-[10px] text-gray-400 mt-0.5">
-            Incoming credit
+            Incoming ({primaryCurrency})
           </p>
         </div>
 
@@ -194,10 +220,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </div>
           </div>
           <h3 className="text-xl font-display font-extrabold text-rose-500">
-            {formatMoney(totalIOwe, 'INR')}
+            {formatMoney(primaryIOwe, primaryCurrency)}
           </h3>
           <p className="text-[10px] text-gray-400 mt-0.5">
-            Pending payments
+            Pending ({primaryCurrency})
           </p>
         </div>
       </div>
