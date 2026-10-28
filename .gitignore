@@ -28,3 +28,6 @@ dist-ssr
 *.aab
 android/.gradle/
 android/app/build/
+
+# Markdown documentation & reports
+*.md
