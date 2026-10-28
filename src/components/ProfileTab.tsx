@@ -6,11 +6,9 @@ import {
   Download, 
   Smartphone, 
   RotateCcw,
-  User as UserIcon,
   CreditCard,
   HardDrive,
-  Copy,
-  ExternalLink
+  Copy
 } from 'lucide-react';
 import { triggerFileDownload } from '../engine/offlineStore';
 

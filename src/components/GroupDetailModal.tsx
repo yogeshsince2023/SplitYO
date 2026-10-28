@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Currency, 
   Expense, 
@@ -23,7 +23,6 @@ import {
   ArrowUpRight, 
   CheckCircle2, 
   Plus, 
-  ShieldCheck,
   QrCode
 } from 'lucide-react';
 
@@ -55,6 +54,15 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({
   const [subTab, setSubTab] = useState<'expenses' | 'balances' | 'recurring' | 'members'>('expenses');
   const [showShareModal, setShowShareModal] = useState(false);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
   const groupExpenses = expenses.filter((e) => e.groupId === group.id);
   const groupSettlements = settlements.filter((s) => s.groupId === group.id);
@@ -70,7 +78,12 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm overflow-y-auto animate-modal-pop">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm overflow-y-auto animate-modal-pop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="group-detail-title"
+    >
       <div 
         className="glass-panel w-full max-w-xl relative my-auto max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
         style={{ background: 'var(--bg-surface)' }}
@@ -82,6 +95,7 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors shadow-md z-10"
             title="Close"
+            aria-label="Close group details"
           >
             <X className="w-4 h-4 text-white" />
           </button>
@@ -91,7 +105,7 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({
               <span className="text-[11px] uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full bg-white/20 inline-block mb-1">
                 {group.category} · {group.currency}
               </span>
-              <h2 className="text-2xl sm:text-3xl font-display font-extrabold">{group.name}</h2>
+              <h2 id="group-detail-title" className="text-2xl sm:text-3xl font-display font-extrabold">{group.name}</h2>
               <p className="text-xs text-white/80 mt-1">
                 {group.members.length} members · Created {new Date(group.createdAt).toLocaleDateString()}
               </p>

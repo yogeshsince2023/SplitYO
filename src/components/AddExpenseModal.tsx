@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Currency, Expense, Group, ReceiptItem, SplitType, User } from '../types';
 import { 
   formatMoney, 
@@ -16,7 +16,6 @@ import {
   Mic, 
   Camera, 
   Receipt, 
-  Users, 
   Check, 
   AlertCircle,
   Plus,
@@ -55,10 +54,19 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   // Basic Details
   const [title, setTitle] = useState('');
   const [amountStr, setAmountStr] = useState('');
-  const [currency, setCurrency] = useState<Currency>(activeGroup?.currency || 'INR');
+  const [currency] = useState<Currency>(activeGroup?.currency || 'INR');
   const [category, setCategory] = useState('Food');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Payers (default: current user pays 100%)
   const [payerId, setPayerId] = useState<string>(currentUserId);
@@ -186,7 +194,12 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-modal-pop">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-modal-pop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-expense-title"
+    >
       <div 
         className="glass-panel w-full max-w-lg p-5 sm:p-6 relative my-auto max-h-[90vh] overflow-y-auto shadow-2xl"
         style={{ background: 'var(--bg-surface)' }}
@@ -201,7 +214,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               <Plus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
+              <h3 id="add-expense-title" className="font-display font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
                 Add Shared Expense
               </h3>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -212,6 +225,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-500/10 text-gray-400"
+            aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
           </button>

@@ -223,7 +223,7 @@ export function App() {
   const syncStatus: SyncStatus = {
     isOnline,
     pendingCount: state.pendingSyncQueue.length,
-    lastSyncedAt: new Date().toLocaleTimeString(),
+    lastSyncedAt: state.activity[0]?.timestamp ? state.activity[0].timestamp.substring(11, 16) : 'Synced',
   };
 
   const handleTabChange = (tab: TabType) => {

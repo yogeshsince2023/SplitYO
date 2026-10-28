@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { ActivityEvent, Group, Settlement, User } from '../types';
 import { formatMoney } from '../engine/expenseEngine';
 import { 
-  History, 
   Receipt, 
   CheckCircle2, 
   UserPlus, 
   RotateCcw, 
-  ArrowUpRight,
-  Filter
+  ArrowUpRight
 } from 'lucide-react';
 
 interface ActivityTabProps {
@@ -133,7 +131,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
         ) : (
           <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-500/20">
             {filtered.map((act) => {
-              const actor = userMap.get(act.actorId);
               let Icon = Receipt;
               let iconColor = 'text-indigo-400 bg-indigo-500/15';
 

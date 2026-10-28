@@ -11,7 +11,7 @@ import {
   parseMoneyToMinor,
   validateSplits,
 } from './expenseEngine';
-import { Expense, Settlement } from '../types';
+import { Expense } from '../types';
 
 describe('expenseEngine', () => {
   describe('formatMoney & parseMoneyToMinor', () => {

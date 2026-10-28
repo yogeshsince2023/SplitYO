@@ -864,3 +864,20 @@ textarea:focus {
   .lg\:hidden { display: none; }
   .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ==========================================================================
+   ACCESSIBILITY: REDUCED MOTION & FOCUS INDICATORS (WCAG 2.2 AA)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}

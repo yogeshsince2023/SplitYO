@@ -16,7 +16,7 @@ interface HeaderProps {
   syncStatus: SyncStatus;
   isDark: boolean;
   onToggleTheme: () => void;
-  onOpenAddExpense: () => void;
+  onOpenAddExpense?: () => void;
   onSelectTab?: (tab: 'profile') => void;
 }
 
@@ -27,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   syncStatus,
   isDark,
   onToggleTheme,
-  onOpenAddExpense,
+  onOpenAddExpense: _onOpenAddExpense,
   onSelectTab,
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
@@ -132,17 +132,32 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Right: Theme Toggle */}
-        <button
-          id="header-theme-btn"
-          onClick={onToggleTheme}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-          style={{ background: 'var(--bg-surface-elevated)', color: 'var(--text-primary)' }}
-          title="Toggle Theme"
-          aria-label="Toggle Dark/Light Mode"
-        >
-          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
-        </button>
+        {/* Right: Sync Status & Theme Toggle */}
+        <div className="flex items-center gap-2">
+          <div 
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+            style={{
+              borderColor: 'var(--border-subtle)',
+              background: 'var(--bg-surface-elevated)',
+              color: syncStatus.isOnline ? '#10b981' : '#f59e0b',
+            }}
+            title={syncStatus.isOnline ? 'Online — Real-time synced' : 'Offline — Saved to local storage'}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${syncStatus.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <span className="hidden sm:inline">{syncStatus.isOnline ? 'Synced' : 'Offline'}</span>
+          </div>
+
+          <button
+            id="header-theme-btn"
+            onClick={onToggleTheme}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+            style={{ background: 'var(--bg-surface-elevated)', color: 'var(--text-primary)' }}
+            title="Toggle Theme"
+            aria-label="Toggle Dark/Light Mode"
+          >
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+          </button>
+        </div>
       </div>
     </header>
   );

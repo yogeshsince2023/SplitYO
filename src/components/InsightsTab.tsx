@@ -2,16 +2,31 @@ import React, { useState } from 'react';
 import { Currency, Expense, Group, User } from '../types';
 import { formatMoney } from '../engine/expenseEngine';
 import { 
-  PieChart, 
   TrendingUp, 
   Calendar, 
   BarChart3, 
   Download, 
-  Layers, 
-  Sparkles,
-  ArrowUpRight
+  Layers
 } from 'lucide-react';
 import { triggerFileDownload } from '../engine/offlineStore';
+
+function createExportReport(
+  currency: Currency,
+  totalSpendingMinor: number,
+  myShareMinor: number,
+  categoryBreakdown: Record<string, number>,
+  validExpenses: Expense[],
+) {
+  return {
+    generatedAt: new Date().toISOString(),
+    currency,
+    totalSpendingMinor,
+    myShareMinor,
+    categoryBreakdown,
+    expensesCount: validExpenses.length,
+    expenses: validExpenses,
+  };
+}
 
 interface InsightsTabProps {
   currentUser: User;
@@ -56,7 +71,6 @@ export const InsightsTab: React.FC<InsightsTabProps> = ({
   });
 
   // 5. Payer Breakdown
-  const userMap = new Map(allUsers.map((u) => [u.id, u]));
   const payerTotals: Record<string, number> = {};
   validExpenses.forEach((e) => {
     e.payers.forEach((p) => {
@@ -65,15 +79,13 @@ export const InsightsTab: React.FC<InsightsTabProps> = ({
   });
 
   const handleExportFullReport = () => {
-    const report = {
-      generatedAt: new Date().toISOString(),
-      currency: selectedCurrency,
-      totalSpendingMinor: totalGroupSpendingMinor,
-      myShareMinor: myTotalShareMinor,
-      categoryBreakdown: categoryTotals,
-      expensesCount: validExpenses.length,
-      expenses: validExpenses,
-    };
+    const report = createExportReport(
+      selectedCurrency,
+      totalGroupSpendingMinor,
+      myTotalShareMinor,
+      categoryTotals,
+      validExpenses,
+    );
     triggerFileDownload(`SplitMate_Financial_Insights_${selectedCurrency}.json`, JSON.stringify(report, null, 2), 'application/json');
   };
 

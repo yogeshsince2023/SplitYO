@@ -11,8 +11,7 @@ import {
   Sparkles, 
   Briefcase, 
   Compass, 
-  X,
-  Check
+  X
 } from 'lucide-react';
 
 interface GroupsTabProps {

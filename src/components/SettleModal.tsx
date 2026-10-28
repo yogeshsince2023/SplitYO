@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Currency, Settlement, User } from '../types';
 import { formatMoney } from '../engine/expenseEngine';
 import { generateUpiUri, generateQrSvgDataUrl } from '../engine/upiGenerator';
@@ -40,6 +40,15 @@ export const SettleModal: React.FC<SettleModalProps> = ({
   const [showQr, setShowQr] = useState<boolean>(true);
   const [submitted, setSubmitted] = useState<boolean>(false);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const amountMinor = Math.round(parseFloat(amountStr || '0') * 100);
 
   const upiUri = toUser.upiId
@@ -73,7 +82,12 @@ export const SettleModal: React.FC<SettleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-pop">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-pop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settle-modal-title"
+    >
       <div 
         className="glass-panel w-full max-w-md p-5 sm:p-6 relative overflow-hidden"
         style={{ background: 'var(--bg-surface)' }}
@@ -88,7 +102,7 @@ export const SettleModal: React.FC<SettleModalProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
+              <h3 id="settle-modal-title" className="font-display font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
                 Settle Balance
               </h3>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -100,6 +114,7 @@ export const SettleModal: React.FC<SettleModalProps> = ({
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-500/10 transition-colors"
             style={{ color: 'var(--text-tertiary)' }}
+            aria-label="Close modal"
           >
             <X className="w-4 h-4" />
           </button>
