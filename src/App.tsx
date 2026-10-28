@@ -4,18 +4,15 @@ import {
   Expense, 
   Group, 
   Settlement, 
-  SyncStatus 
+  SyncStatus,
+  User 
 } from './types';
 import { 
   loadAppState, 
   saveAppState, 
-  INITIAL_EXPENSES, 
-  INITIAL_GROUPS, 
-  INITIAL_USERS, 
-  INITIAL_SETTLEMENTS, 
-  INITIAL_RECURRING, 
-  INITIAL_ACTIVITY 
+  generateUserAvatarSvg 
 } from './engine/offlineStore';
+import { RegisterModal } from './components/RegisterModal';
 import { Header } from './components/Header';
 import { Navigation, TabType } from './components/Navigation';
 import { DashboardTab } from './components/DashboardTab';
@@ -88,12 +85,60 @@ export function App() {
     };
   }, []);
 
-  const currentUser = state.users.find((u) => u.id === state.currentUserId) || state.users[0];
+  const currentUser: User = state.users.find((u) => u.id === state.currentUserId) || state.users[0] || {
+    id: '',
+    name: '',
+    email: '',
+    avatar: '',
+  };
   const activeSelectedGroup = state.groups.find((g) => g.id === selectedGroupId) || null;
 
   // Handlers
-  const handleSwitchUser = (userId: string) => {
-    setState((prev) => ({ ...prev, currentUserId: userId }));
+  const handleRegisterUser = (name: string, upiId: string, email: string, _defaultCurrency: Currency) => {
+    const newUserId = `usr_${Date.now()}`;
+    const newUser: User = {
+      id: newUserId,
+      name,
+      email: email || `${name.toLowerCase().replace(/\s+/g, '')}@device.local`,
+      avatar: generateUserAvatarSvg(name),
+      upiId: upiId || undefined,
+    };
+    const welcomeActivity = [
+      {
+        id: `act_${Date.now()}`,
+        groupId: '',
+        type: 'member_joined' as const,
+        actorId: newUserId,
+        summary: `Welcome to SplitMate! Device profile registered for ${name}.`,
+        timestamp: new Date().toISOString(),
+      },
+    ];
+    setState((prev) => ({
+      ...prev,
+      currentUserId: newUserId,
+      users: [newUser],
+      activity: welcomeActivity,
+    }));
+  };
+
+  const handleAddUser = (name: string, upiId?: string): User => {
+    const cleanName = name.trim();
+    const existing = state.users.find((u) => u.name.toLowerCase() === cleanName.toLowerCase());
+    if (existing) return existing;
+
+    const newUser: User = {
+      id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: cleanName,
+      email: `${cleanName.toLowerCase().replace(/\s+/g, '')}@device.local`,
+      avatar: generateUserAvatarSvg(cleanName),
+      upiId: upiId || undefined,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      users: [...prev.users, newUser],
+    }));
+    return newUser;
   };
 
   const handleOpenAddExpense = (groupId?: string) => {
@@ -207,17 +252,19 @@ export function App() {
   };
 
   const handleResetData = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('splitmate_data_v1');
+    }
     setState({
-      currentUserId: 'usr_arjun',
-      users: INITIAL_USERS,
-      groups: INITIAL_GROUPS,
-      expenses: INITIAL_EXPENSES,
-      settlements: INITIAL_SETTLEMENTS,
-      recurringBills: INITIAL_RECURRING,
-      activity: INITIAL_ACTIVITY,
+      currentUserId: '',
+      users: [],
+      groups: [],
+      expenses: [],
+      settlements: [],
+      recurringBills: [],
+      activity: [],
       pendingSyncQueue: [],
     });
-    alert('SplitMate data reset to default sample data.');
   };
 
   const syncStatus: SyncStatus = {
@@ -266,6 +313,7 @@ export function App() {
             onSelectGroup={(gid) => setSelectedGroupId(gid)}
             onCreateGroup={handleCreateGroup}
             onOpenAddExpense={handleOpenAddExpense}
+            onAddUser={handleAddUser}
           />
         );
       case 'insights':
@@ -304,8 +352,6 @@ export function App() {
       {/* App Header */}
       <Header
         currentUser={currentUser}
-        allUsers={state.users}
-        onSwitchUser={handleSwitchUser}
         syncStatus={syncStatus}
         isDark={isDark}
         onToggleTheme={() => setIsDark(!isDark)}
@@ -385,6 +431,11 @@ export function App() {
           onClose={() => setSettleDetails(null)}
           onConfirmSettlement={handleConfirmSettlement}
         />
+      )}
+
+      {/* Registration / Device Onboarding Modal for First-time Users */}
+      {(!state.currentUserId || state.users.length === 0) && (
+        <RegisterModal onRegister={handleRegisterUser} />
       )}
     </div>
   );

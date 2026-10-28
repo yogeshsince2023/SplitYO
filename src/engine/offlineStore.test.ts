@@ -65,12 +65,13 @@ describe('offlineStore', () => {
   });
 
   describe('Storage Resilience', () => {
-    it('recovers with initial default state when localStorage contains corrupted JSON', () => {
+    it('recovers with clean empty state when localStorage contains corrupted JSON', () => {
       localStorage.setItem('splitmate_data_v1', 'INVALID_JSON_{{]');
       const state = loadAppState();
       expect(state).toBeDefined();
-      expect(state.currentUserId).toBe('usr_arjun');
-      expect(state.groups.length).toBeGreaterThan(0);
+      expect(state.currentUserId).toBe('');
+      expect(state.users.length).toBe(0);
+      expect(state.groups.length).toBe(0);
     });
 
     it('persists and restores state safely', () => {

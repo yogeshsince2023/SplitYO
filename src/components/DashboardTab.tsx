@@ -344,44 +344,62 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
 
         <div className="space-y-2">
-          {groups.map((grp) => {
-            const grpBalances = calculateNetBalances(expenses, settlements, grp.id);
-            const myGrpBalance = grpBalances[currentUser.id] || 0;
-
-            return (
-              <div
-                key={grp.id}
-                onClick={() => onSelectGroup(grp.id)}
-                className="glass-panel p-3 card-interactive overflow-hidden relative"
+          {groups.length === 0 ? (
+            <div className="glass-panel p-6 text-center flex flex-col items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-2">
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>No Groups Yet</div>
+              <p className="text-[11px] text-gray-400 max-w-xs mt-1 mb-3">
+                Create a group for your trip, house, or friends to start adding and splitting expenses.
+              </p>
+              <button
+                onClick={() => onNavigateTab ? onNavigateTab('groups') : null}
+                className="gradient-btn px-3.5 py-1.5 text-xs font-semibold rounded-xl shadow-sm"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white text-xs shadow-sm flex-shrink-0" style={{ background: 'var(--brand-gradient)' }}>
-                      <Users className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-display font-bold text-xs truncate" style={{ color: 'var(--text-primary)' }}>
-                        {grp.name}
-                      </h4>
-                      <p className="text-[10px] text-gray-400 capitalize">
-                        {grp.category} · {grp.members.length} members
-                      </p>
-                    </div>
-                  </div>
+                + Create Your First Group
+              </button>
+            </div>
+          ) : (
+            groups.map((grp) => {
+              const grpBalances = calculateNetBalances(expenses, settlements, grp.id);
+              const myGrpBalance = grpBalances[currentUser.id] || 0;
 
-                  <div className="text-right flex-shrink-0 flex items-center gap-1.5">
-                    <div>
-                      <span className="text-[9px] text-gray-400 block uppercase">Balance</span>
-                      <span className={`text-xs font-bold ${myGrpBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {myGrpBalance >= 0 ? '+' : ''}{formatMoney(myGrpBalance, grp.currency)}
-                      </span>
+              return (
+                <div
+                  key={grp.id}
+                  onClick={() => onSelectGroup(grp.id)}
+                  className="glass-panel p-3 card-interactive overflow-hidden relative"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white text-xs shadow-sm flex-shrink-0" style={{ background: 'var(--brand-gradient)' }}>
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-display font-bold text-xs truncate" style={{ color: 'var(--text-primary)' }}>
+                          {grp.name}
+                        </h4>
+                        <p className="text-[10px] text-gray-400 capitalize">
+                          {grp.category} · {grp.members.length} members
+                        </p>
+                      </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+
+                    <div className="text-right flex-shrink-0 flex items-center gap-1.5">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block uppercase">Balance</span>
+                        <span className={`text-xs font-bold ${myGrpBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {myGrpBalance >= 0 ? '+' : ''}{formatMoney(myGrpBalance, grp.currency)}
+                        </span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 

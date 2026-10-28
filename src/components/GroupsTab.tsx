@@ -23,6 +23,7 @@ interface GroupsTabProps {
   onSelectGroup: (groupId: string) => void;
   onCreateGroup: (group: Omit<Group, 'id' | 'createdAt' | 'inviteCode'>) => void;
   onOpenAddExpense: (groupId: string) => void;
+  onAddUser?: (name: string) => User;
 }
 
 const CATEGORY_ICONS: Record<GroupCategory, any> = {
@@ -51,6 +52,7 @@ export const GroupsTab: React.FC<GroupsTabProps> = ({
   onSelectGroup,
   onCreateGroup,
   onOpenAddExpense,
+  onAddUser,
 }) => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -60,13 +62,25 @@ export const GroupsTab: React.FC<GroupsTabProps> = ({
   const [category, setCategory] = useState<GroupCategory>('trip');
   const [currency, setCurrency] = useState<Currency>('INR');
   const [coverGradient, setCoverGradient] = useState(GRADIENTS[0]);
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([currentUser.id]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([currentUser?.id || '']);
+  const [newMemberName, setNewMemberName] = useState('');
 
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
 
   const filteredGroups = groups.filter(
     (g) => filterCategory === 'all' || g.category === filterCategory,
   );
+
+  const handleAddMember = () => {
+    if (!newMemberName.trim()) return;
+    if (onAddUser) {
+      const newUser = onAddUser(newMemberName.trim());
+      if (!selectedUserIds.includes(newUser.id)) {
+        setSelectedUserIds((prev) => [...prev, newUser.id]);
+      }
+    }
+    setNewMemberName('');
+  };
 
   const handleCreate = () => {
     if (!name.trim()) return;
@@ -138,18 +152,39 @@ export const GroupsTab: React.FC<GroupsTabProps> = ({
 
       {/* Groups Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        {filteredGroups.map((grp) => {
-          const balances = calculateNetBalances(expenses, settlements, grp.id);
-          const myBalance = balances[currentUser.id] || 0;
-          const grpExpenses = expenses.filter((e) => e.groupId === grp.id && !e.isReversed);
-          const Icon = CATEGORY_ICONS[grp.category] || Compass;
-
-          return (
-            <div
-              key={grp.id}
-              className="glass-panel overflow-hidden relative group card-interactive flex flex-col justify-between"
-              onClick={() => onSelectGroup(grp.id)}
+        {filteredGroups.length === 0 ? (
+          <div className="col-span-full glass-panel p-8 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-3">
+              <Users className="w-6 h-6" />
+            </div>
+            <h3 className="font-display font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+              No Groups Found
+            </h3>
+            <p className="text-xs text-gray-400 mt-1 max-w-xs mb-4">
+              {filterCategory === 'all'
+                ? "You haven't created any groups yet. Start by creating a group for a trip, house, or friends."
+                : `No groups found in the "${filterCategory}" category.`}
+            </p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="gradient-btn px-4 py-2 text-xs font-semibold shadow-md"
             >
+              <Plus className="w-4 h-4" /> Create First Group
+            </button>
+          </div>
+        ) : (
+          filteredGroups.map((grp) => {
+            const balances = calculateNetBalances(expenses, settlements, grp.id);
+            const myBalance = balances[currentUser?.id || ''] || 0;
+            const grpExpenses = expenses.filter((e) => e.groupId === grp.id && !e.isReversed);
+            const Icon = CATEGORY_ICONS[grp.category] || Compass;
+
+            return (
+              <div
+                key={grp.id}
+                className="glass-panel overflow-hidden relative group card-interactive flex flex-col justify-between"
+                onClick={() => onSelectGroup(grp.id)}
+              >
               <div className="h-2" style={{ background: 'var(--brand-gradient)' }} />
               
               <div className="p-4">
@@ -214,8 +249,9 @@ export const GroupsTab: React.FC<GroupsTabProps> = ({
               </div>
             </div>
           );
-        })}
-      </div>
+        })
+      )}
+    </div>
 
       {/* CREATE GROUP MODAL */}
       {showCreateModal && (
@@ -313,8 +349,35 @@ export const GroupsTab: React.FC<GroupsTabProps> = ({
               {/* Member Selection */}
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
-                  Add Members ({selectedUserIds.length})
+                  Group Members ({selectedUserIds.length})
                 </label>
+
+                {/* Inline friend name input */}
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Friend's name (e.g. Sarah)"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddMember();
+                      }
+                    }}
+                    className="flex-1 text-xs px-3 py-2 rounded-xl border outline-none"
+                    style={{ background: 'var(--bg-primary)', borderColor: 'var(--border-subtle)', color: 'var(--text-primary)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddMember}
+                    disabled={!newMemberName.trim()}
+                    className="gradient-btn px-3 py-1.5 text-xs font-semibold rounded-xl disabled:opacity-50"
+                  >
+                    + Add
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-1">
                   {allUsers.map((u) => {
                     const isSelected = selectedUserIds.includes(u.id);
@@ -337,7 +400,7 @@ export const GroupsTab: React.FC<GroupsTabProps> = ({
                         style={{ background: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'var(--border-subtle)' }}
                       >
                         <img src={u.avatar} alt={u.name} className="w-5 h-5 rounded-md object-cover" />
-                        <span className="truncate">{u.id === currentUser.id ? 'You' : u.name.split(' ')[0]}</span>
+                        <span className="truncate">{u.id === currentUser?.id ? 'You' : u.name.split(' ')[0]}</span>
                       </button>
                     );
                   })}

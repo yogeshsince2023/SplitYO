@@ -150,13 +150,13 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
           <button
             onClick={() => {
-              if (window.confirm('Reset local database back to default initial state?')) {
+              if (window.confirm('Reset all local data on this phone? You will be prompted to re-register.')) {
                 onResetData();
               }
             }}
             className="py-2 px-3 rounded-xl border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> Reset Demo Data
+            <RotateCcw className="w-3.5 h-3.5" /> Reset Local Data
           </button>
         </div>
       </div>

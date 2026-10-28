@@ -256,42 +256,57 @@ export const INITIAL_ACTIVITY: ActivityEvent[] = [
   },
 ];
 
+/** Generate a 100% offline, privacy-preserving SVG avatar based on user initials */
+export function generateUserAvatarSvg(name: string, bgGradient = '#6366f1'): string {
+  const initials = (name || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('');
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bgGradient}"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><rect width="100%" height="100%" rx="50" fill="url(#g)"/><text x="50" y="58" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="38" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export function loadAppState(): AppState {
+  const emptyState: AppState = {
+    currentUserId: '',
+    users: [],
+    groups: [],
+    expenses: [],
+    settlements: [],
+    recurringBills: [],
+    activity: [],
+    pendingSyncQueue: [],
+  };
+
   if (typeof window === 'undefined') {
-    return {
-      currentUserId: 'usr_arjun',
-      users: INITIAL_USERS,
-      groups: INITIAL_GROUPS,
-      expenses: INITIAL_EXPENSES,
-      settlements: INITIAL_SETTLEMENTS,
-      recurringBills: INITIAL_RECURRING,
-      activity: INITIAL_ACTIVITY,
-      pendingSyncQueue: [],
-    };
+    return emptyState;
   }
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          currentUserId: parsed.currentUserId || '',
+          users: Array.isArray(parsed.users) ? parsed.users : [],
+          groups: Array.isArray(parsed.groups) ? parsed.groups : [],
+          expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+          settlements: Array.isArray(parsed.settlements) ? parsed.settlements : [],
+          recurringBills: Array.isArray(parsed.recurringBills) ? parsed.recurringBills : [],
+          activity: Array.isArray(parsed.activity) ? parsed.activity : [],
+          pendingSyncQueue: Array.isArray(parsed.pendingSyncQueue) ? parsed.pendingSyncQueue : [],
+        };
+      }
     }
   } catch (e) {
     console.error('Failed to load local storage state:', e);
   }
 
-  const initial: AppState = {
-    currentUserId: 'usr_arjun',
-    users: INITIAL_USERS,
-    groups: INITIAL_GROUPS,
-    expenses: INITIAL_EXPENSES,
-    settlements: INITIAL_SETTLEMENTS,
-    recurringBills: INITIAL_RECURRING,
-    activity: INITIAL_ACTIVITY,
-    pendingSyncQueue: [],
-  };
-
-  saveAppState(initial);
-  return initial;
+  return emptyState;
 }
 
 export function saveAppState(state: AppState): void {
