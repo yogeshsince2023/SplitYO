@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+
 export interface UpiPaymentDetails {
   upiId: string;
   payeeName: string;
@@ -21,13 +23,30 @@ export function generateUpiUri(details: UpiPaymentDetails): string {
 }
 
 /**
- * Generate a standalone visual QR representation SVG data-URL
- * using standard QR matrix or quick visual fallback.
+ * Generate a 100% offline, local SVG QR code representation data-URL.
+ * Keeps all financial details private without transmitting data to any third-party server.
  */
 export function generateQrSvgDataUrl(data: string): string {
-  // We can generate a clean SVG QR code display with an embedded quick SVG or encode.
-  // To ensure 100% offline reliability without heavy external libraries,
-  // we render a high-res styled QR canvas/SVG element.
-  const encoded = encodeURIComponent(data);
-  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encoded}&margin=8&color=1e293b`;
+  if (!data) return '';
+  try {
+    const qr = QRCode.create(data, { errorCorrectionLevel: 'M' });
+    const size = qr.modules.size;
+    const margin = 2;
+    const viewBoxSize = size + margin * 2;
+    let paths = '';
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (qr.modules.get(r, c)) {
+          paths += `M${c + margin},${r + margin}h1v1h-1z `;
+        }
+      }
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewBoxSize} ${viewBoxSize}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#ffffff" rx="1"/><path d="${paths}" fill="#0f172a"/></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  } catch (err) {
+    console.error('Failed to generate local QR code:', err);
+    return '';
+  }
 }

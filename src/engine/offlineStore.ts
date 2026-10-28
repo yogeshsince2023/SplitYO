@@ -303,7 +303,16 @@ export function saveAppState(state: AppState): void {
   }
 }
 
-/** Export group expenses as CSV string */
+/** Sanitize CSV text cells to prevent CSV Formula Injection (CWE-1236) */
+function sanitizeCsvCell(val: string): string {
+  const clean = val.replace(/"/g, '""');
+  if (/^[=+\-@\t\r]/.test(clean)) {
+    return `'${clean}`;
+  }
+  return clean;
+}
+
+/** Export group expenses as CSV string with formula injection protection */
 export function exportGroupExpensesCsv(group: Group, expenses: Expense[], users: User[]): string {
   const userMap = new Map(users.map((u) => [u.id, u.name]));
   const headers = ['ID', 'Date', 'Title', 'Category', 'Total Amount', 'Currency', 'Paid By', 'Split Type', 'Participants', 'Notes'];
@@ -314,16 +323,16 @@ export function exportGroupExpensesCsv(group: Group, expenses: Expense[], users:
       const payersStr = e.payers.map((p) => `${userMap.get(p.userId) || p.userId}: ${(p.amountMinor / 100).toFixed(2)}`).join('; ');
       const participantsStr = e.splits.map((s) => `${userMap.get(s.userId) || s.userId}: ${(s.amountMinor / 100).toFixed(2)}`).join('; ');
       return [
-        `"${e.id}"`,
-        `"${e.date}"`,
-        `"${e.title.replace(/"/g, '""')}"`,
-        `"${e.category}"`,
+        `"${sanitizeCsvCell(e.id)}"`,
+        `"${sanitizeCsvCell(e.date)}"`,
+        `"${sanitizeCsvCell(e.title)}"`,
+        `"${sanitizeCsvCell(e.category)}"`,
         (e.totalMinor / 100).toFixed(2),
-        `"${e.currency}"`,
-        `"${payersStr}"`,
-        `"${e.splitType}"`,
-        `"${participantsStr}"`,
-        `"${(e.notes || '').replace(/"/g, '""')}"`,
+        `"${sanitizeCsvCell(e.currency)}"`,
+        `"${sanitizeCsvCell(payersStr)}"`,
+        `"${sanitizeCsvCell(e.splitType)}"`,
+        `"${sanitizeCsvCell(participantsStr)}"`,
+        `"${sanitizeCsvCell(e.notes || '')}"`,
       ].join(',');
     });
 

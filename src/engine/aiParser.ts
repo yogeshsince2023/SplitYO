@@ -45,16 +45,14 @@ export function parseNaturalLanguageExpense(
 
   // 1. Detect Currency
   let currency: Currency = defaultCurrency;
-  if (text.includes('$')) currency = 'USD';
-  else if (text.includes('€')) currency = 'EUR';
-  else if (text.includes('£')) currency = 'GBP';
-  else if (text.includes('₹') || lower.includes('rs') || lower.includes('inr')) currency = 'INR';
-  else if (lower.includes('usd')) currency = 'USD';
-  else if (lower.includes('eur')) currency = 'EUR';
+  if (text.includes('$') || lower.includes('usd') || lower.includes('dollars') || lower.includes('bucks')) currency = 'USD';
+  else if (text.includes('€') || lower.includes('eur') || lower.includes('euros')) currency = 'EUR';
+  else if (text.includes('£') || lower.includes('gbp') || lower.includes('pounds')) currency = 'GBP';
+  else if (text.includes('₹') || lower.includes('rs') || lower.includes('inr') || lower.includes('rupees')) currency = 'INR';
 
   // 2. Detect Amount
-  // matches patterns like: ₹900, $45.50, 45 dollars, 1200
-  const amountRegex = /(?:[$€£₹]|rs\.?|inr\s*)?\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars|bucks|rupees|rs|euros|pounds)?/i;
+  // matches patterns like: ₹1,200, $45.50, 45 dollars, 1200
+  const amountRegex = /(?:[$€£₹]|rs\.?|inr\s*)?\s*([\d,]+(?:\.\d{1,2})?)\s*(?:dollars|bucks|rupees|rs|euros|pounds)?/i;
   const amountMatch = text.match(amountRegex);
   const amountMinor = amountMatch ? parseMoneyToMinor(amountMatch[1], currency) : 0;
 
@@ -70,8 +68,10 @@ export function parseNaturalLanguageExpense(
   // 4. Detect Payer
   let payerUserId = currentUserId;
   for (const member of groupMembers) {
-    const memberName = member.name.toLowerCase();
-    const paidByPattern = new RegExp(`(?:paid by|by)\\s+${memberName}|${memberName}\\s+(?:paid|bought)`, 'i');
+    const fullName = member.name.toLowerCase();
+    const firstName = fullName.split(' ')[0];
+    const namePattern = `(?:${fullName}|${firstName})`;
+    const paidByPattern = new RegExp(`(?:paid by|by)\\s+${namePattern}|${namePattern}\\s+(?:paid|bought)`, 'i');
     if (paidByPattern.test(text)) {
       payerUserId = member.id;
       break;
@@ -85,9 +85,11 @@ export function parseNaturalLanguageExpense(
   if (includesEveryone) {
     groupMembers.forEach((m) => participantIds.add(m.id));
   } else {
-    // Check for specific mentioned members
+    // Check for specific mentioned members (by full name or first name)
     groupMembers.forEach((m) => {
-      if (lower.includes(m.name.toLowerCase())) {
+      const fullName = m.name.toLowerCase();
+      const firstName = fullName.split(' ')[0];
+      if (lower.includes(fullName) || (firstName.length >= 3 && new RegExp(`\\b${firstName}\\b`, 'i').test(text))) {
         participantIds.add(m.id);
       }
     });
