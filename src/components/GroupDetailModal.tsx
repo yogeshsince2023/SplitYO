@@ -25,6 +25,7 @@ import {
   Plus, 
   QrCode
 } from 'lucide-react';
+import { CATEGORIES, formatSplitwiseDate } from '../engine/categoryHelper';
 
 interface GroupDetailModalProps {
   group: Group;
@@ -176,46 +177,88 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({
                 </div>
               ) : (
                 groupExpenses.map((exp) => {
+                  const { month, day } = formatSplitwiseDate(exp.date);
                   const payer = userMap.get(exp.payers[0]?.userId);
                   const isReversed = exp.isReversed;
+                  const isPayerMe = exp.payers[0]?.userId === currentUser.id;
+
+                  // Personal impact
+                  const myPaid = exp.payers.find((p) => p.userId === currentUser.id)?.amountMinor || 0;
+                  const mySplit = exp.splits.find((s) => s.userId === currentUser.id)?.amountMinor || 0;
+                  const myNet = myPaid - mySplit;
+
+                  const categoryMeta = CATEGORIES[exp.category] || CATEGORIES.General;
 
                   return (
                     <div
                       key={exp.id}
-                      className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
                         isReversed ? 'opacity-40 line-through bg-gray-500/5' : 'hover:border-indigo-500/30'
                       }`}
                       style={{ background: 'var(--bg-primary)', borderColor: 'var(--border-subtle)' }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                          {exp.category[0]}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Splitwise Date Pill */}
+                        <div className="text-center w-8 shrink-0 py-0.5 rounded-lg border text-[9px] font-bold" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-surface)' }}>
+                          <span className="block text-gray-400 leading-none text-[8px] uppercase">{month}</span>
+                          <span className="block text-gray-200 leading-tight text-xs font-display">{day}</span>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+
+                        {/* Category Icon */}
+                        <div 
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
+                          style={{ background: categoryMeta.bgColor }}
+                        >
+                          {categoryMeta.icon}
+                        </div>
+
+                        {/* Description & Subtitle */}
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>
                             {exp.title}
                           </h4>
-                          <p className="text-[11px] text-gray-400">
-                            Paid by <span className="font-semibold">{payer?.name || 'Someone'}</span> on {exp.date} · {exp.splitType} split ({exp.splits.length} people)
+                          <p className="text-[10px] text-gray-400 truncate">
+                            {isPayerMe ? 'You paid' : `${payer?.name?.split(' ')[0] || 'Someone'} paid`} {formatMoney(exp.totalMinor, exp.currency)} · {exp.splitType} ({exp.splits.length} people)
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {/* Personal Splitwise Impact */}
                         <div className="text-right">
-                          <span className="font-display font-bold text-sm block" style={{ color: 'var(--text-primary)' }}>
-                            {formatMoney(exp.totalMinor, exp.currency)}
-                          </span>
+                          {myNet > 0 ? (
+                            <div>
+                              <span className="text-[9px] block text-emerald-400 font-semibold uppercase">you lent</span>
+                              <span className="text-xs font-bold text-emerald-500 font-display">
+                                +{formatMoney(myNet, exp.currency)}
+                              </span>
+                            </div>
+                          ) : myNet < 0 ? (
+                            <div>
+                              <span className="text-[9px] block text-rose-400 font-semibold uppercase">you borrowed</span>
+                              <span className="text-xs font-bold text-rose-500 font-display">
+                                -{formatMoney(Math.abs(myNet), exp.currency)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-[9px] block text-gray-400 uppercase">no balance</span>
+                              <span className="text-xs font-bold text-gray-400 font-display">
+                                {formatMoney(exp.totalMinor, exp.currency)}
+                              </span>
+                            </div>
+                          )}
+
                           {isReversed && (
-                            <span className="badge badge-danger text-[9px]">Reversed</span>
+                            <span className="badge badge-danger text-[9px] mt-0.5">Reversed</span>
                           )}
                         </div>
 
                         {!isReversed && (
                           <button
                             onClick={() => onReverseExpense(exp.id)}
-                            className="text-[10px] text-rose-500 hover:underline px-2 py-1 rounded hover:bg-rose-500/10 transition-colors"
-                            title="Reverse / Cancel this expense"
+                            className="text-[10px] text-rose-400 hover:text-rose-300 px-1.5 py-1 rounded hover:bg-rose-500/10 transition-colors"
+                            title="Reverse this expense"
                           >
                             Reverse
                           </button>

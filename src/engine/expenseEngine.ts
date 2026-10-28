@@ -316,3 +316,46 @@ export function simplifyDebts(
 
   return simplified;
 }
+
+/** Calculate direct pairwise debt between current user and a specific friend */
+export function calculatePairwiseBalance(
+  currentUserId: string,
+  friendId: string,
+  expenses: Expense[],
+  settlements: Settlement[],
+  currency: Currency = 'INR',
+): number {
+  let net = 0;
+
+  for (const exp of expenses) {
+    if (exp.isReversed) continue;
+    if (exp.currency !== currency) continue;
+
+    const myPaid = exp.payers.find((p) => p.userId === currentUserId)?.amountMinor || 0;
+    const friendPaid = exp.payers.find((p) => p.userId === friendId)?.amountMinor || 0;
+    const mySplit = exp.splits.find((s) => s.userId === currentUserId)?.amountMinor || 0;
+    const friendSplit = exp.splits.find((s) => s.userId === friendId)?.amountMinor || 0;
+
+    if (exp.totalMinor <= 0) continue;
+
+    if (myPaid > 0 && friendSplit > 0) {
+      const shareCoveredByMe = Math.round((friendSplit * myPaid) / exp.totalMinor);
+      net += shareCoveredByMe;
+    }
+    if (friendPaid > 0 && mySplit > 0) {
+      const shareCoveredByFriend = Math.round((mySplit * friendPaid) / exp.totalMinor);
+      net -= shareCoveredByFriend;
+    }
+  }
+
+  for (const stl of settlements) {
+    if (stl.currency !== currency) continue;
+    if (stl.fromUserId === currentUserId && stl.toUserId === friendId) {
+      net += stl.amountMinor;
+    } else if (stl.fromUserId === friendId && stl.toUserId === currentUserId) {
+      net -= stl.amountMinor;
+    }
+  }
+
+  return net;
+}

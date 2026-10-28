@@ -153,18 +153,38 @@ export function App() {
       createdAt: new Date().toISOString(),
     };
 
-    const targetGroup = state.groups.find((g) => g.id === newExpData.groupId);
+    const fallbackGroup: Group = {
+      id: newExpData.groupId || `grp_${Date.now()}`,
+      name: 'General Expenses',
+      category: 'other',
+      currency: newExpData.currency,
+      inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+      coverGradient: 'from-indigo-600 via-indigo-700 to-violet-800',
+      members: state.users.map((u) => ({
+        userId: u.id,
+        role: u.id === state.currentUserId ? 'owner' : 'member',
+        joinedAt: new Date().toISOString(),
+      })),
+      createdAt: new Date().toISOString(),
+    };
+
+    const targetGroup: Group = state.groups.find((g) => g.id === newExpData.groupId) ?? fallbackGroup;
+    const isNewGroup = !state.groups.some((g) => g.id === targetGroup.id);
+    const updatedGroups = isNewGroup ? [targetGroup, ...state.groups] : state.groups;
+    newExpense.groupId = targetGroup.id;
+
     const activityItem = {
       id: `act_${Date.now()}`,
-      groupId: newExpData.groupId,
+      groupId: newExpense.groupId,
       type: 'expense_created' as const,
       actorId: state.currentUserId,
-      summary: `${currentUser.name} added "${newExpData.title}" (${(newExpData.totalMinor / 100).toFixed(2)} ${newExpData.currency}) to ${targetGroup?.name || 'group'}`,
+      summary: `${currentUser.name} added "${newExpData.title}" (${(newExpData.totalMinor / 100).toFixed(2)} ${newExpData.currency}) to ${targetGroup.name}`,
       timestamp: new Date().toISOString(),
     };
 
     setState((prev) => ({
       ...prev,
+      groups: updatedGroups,
       expenses: [newExpense, ...prev.expenses],
       activity: [activityItem, ...prev.activity],
     }));
@@ -393,6 +413,8 @@ export function App() {
             setAddExpenseGroupId(undefined);
           }}
           onSaveExpense={handleSaveExpense}
+          onAddUser={handleAddUser}
+          onCreateGroup={handleCreateGroup}
         />
       )}
 
